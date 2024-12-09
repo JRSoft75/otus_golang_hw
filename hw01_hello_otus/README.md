@@ -20,3 +20,13 @@ Hello, OTUS!
 
 ### Подсказки
 - `Reverse`
+
+
+
+//Реализуйте код домашнего задания в директории с ДЗ.
+//Проверьте, что следующие команды завершаются успешно:
+//$ cd hw01_hello_otus
+//$ golangci-lint run .
+//$ go test -v -count=1 -race -timeout=1m .
+//$ ./test.sh # При наличии
+//Это те команды, которые запускаются в CI (см. .github/workflows/tests.yml).
