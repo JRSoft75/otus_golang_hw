@@ -17,7 +17,6 @@ func Unpack(input string) (string, error) {
 	for _, symbol := range input {
 		switch {
 		case escaped:
-			// Если символ экранирован, он должен быть либо цифрой, либо '\'
 			if symbol != '\\' && !unicode.IsDigit(symbol) {
 				return "", ErrInvalidString
 			}
