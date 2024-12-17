@@ -4,7 +4,6 @@ import (
 	"errors"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
 var ErrInvalidString = errors.New("invalid string")
@@ -17,7 +16,7 @@ func Unpack(input string) (string, error) {
 	for _, symbol := range input {
 		switch {
 		case escaped:
-			if symbol != '\\' && !unicode.IsDigit(symbol) {
+			if symbol != '\\' && (symbol < '0' || symbol > '9') {
 				return "", ErrInvalidString
 			}
 			prevRune = symbol
@@ -25,21 +24,25 @@ func Unpack(input string) (string, error) {
 
 		case symbol == '\\':
 			escaped = true
-			result.WriteRune(prevRune)
-
-		case unicode.IsDigit(symbol):
-			if prevRune == 0 {
-				return "", ErrInvalidString
-			}
-			count, _ := strconv.Atoi(string(symbol))
-			result.WriteString(strings.Repeat(string(prevRune), count))
-			prevRune = 0
-
-		default:
 			if prevRune != 0 {
 				result.WriteRune(prevRune)
 			}
-			prevRune = symbol
+			prevRune = 0
+
+		default:
+			count, err := strconv.Atoi(string(symbol))
+			if err == nil {
+				if prevRune == 0 {
+					return "", ErrInvalidString
+				}
+				result.WriteString(strings.Repeat(string(prevRune), count))
+				prevRune = 0
+			} else {
+				if prevRune != 0 {
+					result.WriteRune(prevRune)
+				}
+				prevRune = symbol
+			}
 		}
 	}
 	if prevRune != 0 {
