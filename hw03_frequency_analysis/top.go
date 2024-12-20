@@ -7,7 +7,7 @@ import (
 	"unicode"
 )
 
-// Регулярное выражение для удаления знаков препинания по краям слова
+// Регулярное выражение для удаления знаков препинания по краям слова.
 var re = regexp.MustCompile(`^\p{P}+|\p{P}+$`)
 
 func Top10(inputString string) []string {
@@ -58,7 +58,7 @@ func Top10(inputString string) []string {
 	return result
 }
 
-// Функция для проверки, содержит ли строка буквы или цифры
+// Функция для проверки, содержит ли строка буквы или цифры.
 func containsLetterOrDigit(s string) bool {
 	for _, r := range s {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) {
