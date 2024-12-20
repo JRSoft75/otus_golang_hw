@@ -1,9 +1,14 @@
 package hw03frequencyanalysis
 
 import (
+	"regexp"
 	"sort"
 	"strings"
+	"unicode"
 )
+
+// Регулярное выражение для удаления знаков препинания по краям слова
+var re = regexp.MustCompile(`^\p{P}+|\p{P}+$`)
 
 func Top10(inputString string) []string {
 	// Разделяем текст на слова
@@ -12,6 +17,16 @@ func Top10(inputString string) []string {
 	// Создаем карту для подсчета частоты слов
 	wordCount := make(map[string]int)
 	for _, word := range words {
+		// Приводим слово к нижнему регистру
+		word = strings.ToLower(word)
+		// Удаляем знаки препинания по краям, если слово содержит буквы или цифры
+		if containsLetterOrDigit(word) {
+			word = re.ReplaceAllString(word, "")
+		}
+		// Пропускаем пустые строки и одиночные тире
+		if word == "" || word == "-" {
+			continue
+		}
 		wordCount[word]++
 	}
 
@@ -41,4 +56,14 @@ func Top10(inputString string) []string {
 	}
 
 	return result
+}
+
+// Функция для проверки, содержит ли строка буквы или цифры
+func containsLetterOrDigit(s string) bool {
+	for _, r := range s {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			return true
+		}
+	}
+	return false
 }
