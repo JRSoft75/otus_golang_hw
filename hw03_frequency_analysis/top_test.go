@@ -7,7 +7,7 @@ import (
 )
 
 // Change to true if needed.
-var taskWithAsteriskIsCompleted = false
+var taskWithAsteriskIsCompleted = true
 
 var text = `Как видите, он  спускается  по  лестнице  вслед  за  своим
 	другом   Кристофером   Робином,   головой   вниз,  пересчитывая
@@ -78,5 +78,33 @@ func TestTop10(t *testing.T) {
 			}
 			require.Equal(t, expected, Top10(text))
 		}
+	})
+
+	t.Run("some words", func(t *testing.T) {
+		words := "Нога нога нога! нога, нога' "
+		expected := []string{
+			"нога",
+		}
+		require.Equal(t, expected, Top10(words))
+	})
+
+	t.Run("some words", func(t *testing.T) {
+		words := "какой-то какойто"
+		expected := []string{
+			"какой-то",
+			"какойто",
+		}
+		require.Equal(t, expected, Top10(words))
+	})
+
+	t.Run("some words", func(t *testing.T) {
+		words := "dog,cat dog...cat dogcat ------- -"
+		expected := []string{
+			"-------",
+			"dog,cat",
+			"dog...cat",
+			"dogcat",
+		}
+		require.Equal(t, expected, Top10(words))
 	})
 }
