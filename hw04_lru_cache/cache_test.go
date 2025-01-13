@@ -49,14 +49,69 @@ func TestCache(t *testing.T) {
 		require.Nil(t, val)
 	})
 
+	// Тест на логику выталкивания элементов из-за размера очереди (например: n = 3, добавили 4 элемента - 1й из кэша вытолкнулся);
 	t.Run("purge logic", func(t *testing.T) {
-		// Write me
+		c := NewCache(3)
+		_ = c.Set("aaa", 100)
+		_ = c.Set("bbb", 200)
+		_ = c.Set("ccc", 300)
+		_ = c.Set("ddd", 400)
+
+		val, ok := c.Get("aaa")
+		require.False(t, ok)
+		require.Nil(t, val)
+
+		val, ok = c.Get("bbb")
+		require.True(t, ok)
+
+		val, ok = c.Get("ccc")
+		require.True(t, ok)
+
+		val, ok = c.Get("ddd")
+		require.True(t, ok)
+	})
+
+	// Тест на логику выталкивания давно используемых элементов (например: n = 3, добавили 3 элемента, обратились несколько раз к разным элементам: изменили значение, получили значение и пр. - добавили 4й элемент, из первой тройки вытолкнется тот элемент, что был затронут наиболее давно).
+	t.Run("logic for access time", func(t *testing.T) {
+		c := NewCache(3)
+		_ = c.Set("aaa", 100)
+		_ = c.Set("bbb", 200)
+		_ = c.Set("ccc", 300)
+
+		val, ok := c.Get("aaa")
+		require.True(t, ok)
+
+		val, ok = c.Get("bbb")
+		require.True(t, ok)
+
+		_ = c.Set("aaa", 400)
+		_ = c.Set("bbb", 500)
+
+		val, _ = c.Get("aaa")
+		val, _ = c.Get("bbb")
+
+		_ = c.Set("aaa", 600)
+
+		val, _ = c.Get("aaa")
+
+		_ = c.Set("ddd", 700)
+
+		val, ok = c.Get("aaa")
+		require.True(t, ok)
+
+		val, ok = c.Get("bbb")
+		require.True(t, ok)
+
+		val, ok = c.Get("ccc")
+		require.False(t, ok)
+		require.Nil(t, val)
+
+		val, ok = c.Get("ddd")
+		require.True(t, ok)
 	})
 }
 
 func TestCacheMultithreading(t *testing.T) {
-	t.Skip() // Remove me if task with asterisk completed.
-
 	c := NewCache(10)
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
