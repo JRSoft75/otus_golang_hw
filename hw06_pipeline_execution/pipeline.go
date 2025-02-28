@@ -9,49 +9,99 @@ type (
 type Stage func(in In) (out Out)
 
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	out := in // Начинаем с входного канала.
-	// Запускаем горутину для обработки стейджей
-	go func() {
-		//select {
-		//case <-done:
-		//	return // Завершаем, если канал done закрыт
-		//default:
-		//}
-		defer close(out) // Закрываем выходной канал после завершения работы стейджа.
+	currentOut := in // Начинаем с входного канала.
+	// Создаем выходной канал
+	//out := make(Bi)
 
-		// Создаем пайплайн, последовательно соединяя все стейджи.
-		for _, stage := range stages {
-			in := out // Сохраняем текущий выход как вход для следующего стейджа.
+	// Создаем пайплайн, последовательно соединяя все стейджи.
+	for _, stage := range stages {
+		inputNext := currentOut // Сохраняем текущий выход как вход для следующего стейджа.
 
-			// Создаем временный канал
-			tmpOut := make(chan interface{})
+		// Создаем временный канал
+		tmpOut := make(chan interface{})
 
-			go func(s Stage, input In, output chan interface{}, stop In) {
-				defer close(output) // Закрываем выходной канал после завершения работы стейджа.
-				for inputValue := range input {
-					select {
-					case <-stop: // Проверяем сигнал остановки.
-						return
-					default:
-						// Применяем стейдж к данным.
-						result := s(makeOneElemChan(inputValue)) // Передаем данные через одноразовый канал.
-						for r := range result {
-							select {
-							case <-stop: // Проверяем сигнал остановки перед отправкой данных.
-								return
-							case output <- r: // Отправляем результат в выходной канал.
-							}
+		go func(s Stage, input In, output chan interface{}, stop In) {
+			defer close(output) // Закрываем выходной канал после завершения работы стейджа.
+			for {
+				select {
+				case <-stop: // Проверяем сигнал остановки.
+					return
+				case inputValue, ok := <-input:
+					if !ok {
+						return // Входной канал закрыт
+					}
+					result := s(makeOneElemChan(inputValue)) // Передаем данные через одноразовый канал.
+					for r := range result {
+						select {
+						case output <- r: // Отправляем результат в выходной канал.
 						}
 					}
 				}
-			}(stage, in, tmpOut, done)
+			}
+			//for inputValue := range input {
+			//	select {
+			//	case <-stop: // Проверяем сигнал остановки.
+			//		return
+			//	default:
+			//		// Применяем стейдж к данным.
+			//		result := s(makeOneElemChan(inputValue)) // Передаем данные через одноразовый канал.
+			//		for r := range result {
+			//			select {
+			//			case <-stop: // Проверяем сигнал остановки перед отправкой данных.
+			//				return
+			//			case output <- r: // Отправляем результат в выходной канал.
+			//			}
+			//		}
+			//	}
+			//}
 
-			// Преобразуем временный канал в канал только для чтения.
-			out = tmpOut
-		}
-	}()
+			//for {
+			//	select {
+			//	case <-stop:
+			//		return // Завершаем, если канал done закрыт
+			//	case inputValue, ok := <-input:
+			//		if !ok {
+			//			return // Входной канал закрыт
+			//		}
+			//		select {
+			//		case <-stop:
+			//			return // Завершаем, если канал done закрыт
+			//		default:
+			//			stageResult := s(makeOneElemChan(inputValue)) // Передаем данные через одноразовый канал.
+			//			for r := range stageResult {
+			//				select {
+			//				case <-stop: // Проверяем сигнал остановки перед отправкой данных.
+			//					return
+			//				case output <- r: // Отправляем результат в выходной канал.
+			//				}
+			//			}
+			//
+			//		}
+			//	}
+			//}
 
-	return out // Возвращаем канал только для чтения.
+			//for inputValue := range input {
+			//	select {
+			//	case <-stop: // Проверяем сигнал остановки.
+			//		return
+			//	default:
+			//		// Применяем стейдж к данным.
+			//		result := s(makeOneElemChan(inputValue)) // Передаем данные через одноразовый канал.
+			//		for r := range result {
+			//			select {
+			//			case <-stop: // Проверяем сигнал остановки перед отправкой данных.
+			//				return
+			//			case output <- r: // Отправляем результат в выходной канал.
+			//			}
+			//		}
+			//	}
+			//}
+		}(stage, inputNext, tmpOut, done)
+
+		currentOut = tmpOut
+	}
+
+	return currentOut
 }
 
 // Вспомогательная функция для создания канала с одним элементом.
