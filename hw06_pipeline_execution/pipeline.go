@@ -17,7 +17,6 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 		}
 		out = stage(doFunction(out, done))
 	}
-
 	return doFunction(out, done)
 }
 
@@ -26,8 +25,8 @@ func doFunction(inputCh In, stop In) Out {
 	go func() {
 		defer func() {
 			close(out) // Закрываем выходной канал после завершения работы стейджа.
-			for range inputCh {
-				// очищаем канал от данных
+			for skip := range inputCh {
+				_ = skip // очищаем канал от данных
 			}
 		}()
 		for {
@@ -42,6 +41,5 @@ func doFunction(inputCh In, stop In) Out {
 			}
 		}
 	}()
-
 	return out
 }
