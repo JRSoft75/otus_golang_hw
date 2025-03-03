@@ -24,18 +24,18 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	// Получаем информацию о исходном файле
 	srcFile, err := os.Open(fromPath)
 	if err != nil {
-		return fmt.Errorf("Ошибка при открытии исходного файла: %v\n", err)
+		return fmt.Errorf("ошибка при открытии исходного файла: %w", err)
 	}
 	defer func() {
 		err := srcFile.Close()
 		if err != nil {
-			fmt.Printf("Ошибка при закрытии исходного файла: %v\n", err)
+			fmt.Printf("Ошибка при закрытии исходного файла: %v", err)
 		}
 	}()
 
 	fileInfo, err := srcFile.Stat()
 	if err != nil {
-		return fmt.Errorf("Ошибка при получении информации о файле: %v\n", err)
+		return fmt.Errorf("ошибка при получении информации о файле: %w", err)
 	}
 
 	// Проверяем, что offset не превышает размер файла
@@ -55,7 +55,7 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 
 	// Устанавливаем смещение
 	if _, err := srcFile.Seek(offset, io.SeekStart); err != nil {
-		return fmt.Errorf("Ошибка при установке смещения: %v\n", err)
+		return fmt.Errorf("ошибка при установке смещения: %w", err)
 	}
 
 	// Определяем количество байт для копирования
@@ -67,12 +67,12 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	// Открываем целевой файл для записи
 	dstFile, err := os.Create(toPath)
 	if err != nil {
-		return fmt.Errorf("Ошибка при создании целевого файла: %v\n", err)
+		return fmt.Errorf("ошибка при создании целевого файла: %w", err)
 	}
 	defer func() {
 		err := dstFile.Close()
 		if err != nil {
-			fmt.Printf("Ошибка при закрытии целевого файла: %v\n", err)
+			fmt.Printf("ошибка при закрытии целевого файла: %v", err)
 		}
 	}()
 
@@ -84,7 +84,7 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	for {
 		readedBytes, err := srcFile.Read(buffer)
 		if err != nil && err != io.EOF {
-			return fmt.Errorf("Ошибка при чтении из исходного файла: %v\n", err)
+			return fmt.Errorf("ошибка при чтении из исходного файла: %w", err)
 		}
 		if readedBytes == 0 {
 			break // Достигнут конец файла
@@ -97,7 +97,7 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 
 		// Записываем данные в целевой файл
 		if _, err := dstFile.Write(buffer[:readedBytes]); err != nil {
-			return fmt.Errorf("Ошибка при записи в целевой файл: %v\n", err)
+			return fmt.Errorf("ошибка при записи в целевой файл: %w", err)
 		}
 
 		totalCopied += int64(readedBytes)
