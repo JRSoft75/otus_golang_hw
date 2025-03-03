@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/cheggaaa/pb/v3"
+	"github.com/cheggaaa/pb/v3" //nolint:depguard
 )
 
 var (
