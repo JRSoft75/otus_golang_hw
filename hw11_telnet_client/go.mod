@@ -1,6 +1,6 @@
 module github.com/JRSoft75/otus_golang_hw/hw11_telnet_client
 
-go 1.22
+go 1.23
 
 require github.com/stretchr/testify v1.7.0
 
