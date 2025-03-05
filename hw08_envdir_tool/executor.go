@@ -14,7 +14,7 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr
 
-	commandEnv := make([]string, len(env))
+	commandEnv := []string{}
 	for envItemName, envItemValue := range env {
 		commandEnv = append(commandEnv, envItemName+"="+envItemValue.Value)
 	}
