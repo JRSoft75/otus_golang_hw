@@ -20,29 +20,12 @@ type EnvValue struct {
 // Variables represented as files where filename is name of variable, file first line is a value.
 func ReadDir(dir string) (Environment, error) {
 	newEnv := make(Environment)
-	// Получаем список переменных окружения
-	envVars := os.Environ()
-
-	// Создаем мапу для хранения переменных окружения
-	envMap := make(map[string]string)
-
-	// Заполняем мапу переменными окружения
-	for _, envVar := range envVars {
-		// Разделяем строку на ключ и значение
-		parts := strings.SplitN(envVar, "=", 2)
-		if len(parts) == 2 {
-			key := parts[0]
-			value := parts[1]
-			envMap[key] = value
-		}
-	}
 
 	// Получаем список всех файлов в директории testdata
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		return newEnv, fmt.Errorf("ошибка при чтении директории %s: %w", dir, err)
 	}
-
 	for _, file := range files {
 		if file.IsDir() {
 			continue // Пропускаем поддиректории
@@ -50,20 +33,7 @@ func ReadDir(dir string) (Environment, error) {
 		if strings.Contains(file.Name(), "=") {
 			continue // Пропускаем файл с = в имени
 		}
-
-		envValue, _ := getEnv(dir, file.Name())
-		if envValue.NeedRemove {
-			delete(envMap, file.Name())
-		} else {
-			envMap[file.Name()] = sanitizeValue(envValue.Value)
-		}
-	}
-
-	for key, value := range envMap {
-		newEnv[key] = EnvValue{
-			Value:      value,
-			NeedRemove: false,
-		}
+		newEnv[file.Name()], err = getEnv(dir, file.Name())
 	}
 
 	return newEnv, err
@@ -92,6 +62,7 @@ func getEnv(dir, fileName string) (EnvValue, error) {
 	defer func() {
 		err := file.Close() // Закрываем файл в конце
 		if err != nil {
+			fmt.Printf("ошибка при открытии файла: %v", err)
 		}
 	}()
 
@@ -100,7 +71,6 @@ func getEnv(dir, fileName string) (EnvValue, error) {
 		return result, fmt.Errorf("ошибка при получении информации о файле %s: %w", srcFilePath, err)
 	}
 
-	result.Value = fileName
 	if fileInfo.Size() == 0 {
 		result.NeedRemove = true
 		return result, nil
@@ -112,7 +82,7 @@ func getEnv(dir, fileName string) (EnvValue, error) {
 	// Читаем первую строку
 	if scanner.Scan() {
 		firstLine := scanner.Text() // Получаем текст первой строки
-		result.Value = firstLine
+		result.Value = sanitizeValue(firstLine)
 		result.NeedRemove = false
 		return result, nil
 	} else if err := scanner.Err(); err != nil {
