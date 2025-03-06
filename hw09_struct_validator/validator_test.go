@@ -35,9 +35,13 @@ type (
 		Code int    `validate:"in:200,404,500"`
 		Body string `json:"omitempty"`
 	}
+
+	Other struct {
+		Array []int `validate:"min:10|max:100"`
+	}
 )
 
-func TestValidate(t *testing.T) {
+func TestValidateUser(t *testing.T) {
 	tests := []struct {
 		name        string
 		in          interface{}
@@ -136,9 +140,27 @@ func TestValidate(t *testing.T) {
 			expectedErr: ValidationErrors{
 				{
 					Field: "Phones",
-					Err:   fmt.Errorf("длина строки должна быть 11 символов"),
+					Err:   fmt.Errorf("[0]:длина строки должна быть 11 символов"),
 				},
 			},
+		},
+	}
+
+	RunTests(t, tests)
+}
+
+func TestValidateApp(t *testing.T) {
+	tests := []struct {
+		name        string
+		in          interface{}
+		expectedErr error
+	}{
+		{
+			name: "valid app",
+			in: App{
+				Version: "1.0.0",
+			},
+			expectedErr: nil,
 		},
 		{
 			name: "invalid app",
@@ -152,6 +174,46 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
+	}
+
+	RunTests(t, tests)
+}
+
+func TestValidateToken(t *testing.T) {
+	tests := []struct {
+		name        string
+		in          interface{}
+		expectedErr error
+	}{
+		{
+			name: "valid token",
+			in: Token{
+				Header:    []byte("header"),
+				Payload:   []byte("payload"),
+				Signature: []byte("signature"),
+			},
+			expectedErr: nil, // Ожидаем, что валидация пройдет без ошибок
+		},
+		{
+			name: "empty token",
+			in: Token{
+				Header:    []byte{},
+				Payload:   []byte{},
+				Signature: []byte{},
+			},
+			expectedErr: nil, // Ожидаем, что валидация пройдет без ошибок
+		},
+	}
+
+	RunTests(t, tests)
+}
+
+func TestValidateResponse(t *testing.T) {
+	tests := []struct {
+		name        string
+		in          interface{}
+		expectedErr error
+	}{
 		{
 			name: "valid response",
 			in: Response{
@@ -175,6 +237,73 @@ func TestValidate(t *testing.T) {
 		},
 	}
 
+	RunTests(t, tests)
+}
+
+func TestValidateOther(t *testing.T) {
+	tests := []struct {
+		name        string
+		in          interface{}
+		expectedErr error
+	}{
+		{
+			name: "valid other",
+			in: Other{
+				Array: []int{10, 20, 30, 40, 50},
+			},
+			expectedErr: nil, // Ожидаем, что валидация пройдет без ошибок
+		},
+		{
+			name: "invalid other - more 100",
+			in: Other{
+				Array: []int{10, 20, 30, 40, 500},
+			},
+			expectedErr: ValidationErrors{
+				{
+					Field: "Array",
+					Err:   fmt.Errorf("[4]:число не может быть больше 100"),
+				},
+			},
+		},
+		{
+			name: "invalid other - less 10",
+			in: Other{
+				Array: []int{1, 20, 30, 40, 50},
+			},
+			expectedErr: ValidationErrors{
+				{
+					Field: "Array",
+					Err:   fmt.Errorf("[0]:число не может быть меньше 10"),
+				},
+			},
+		},
+		{
+			name: "invalid other - less 10 and more 100",
+			in: Other{
+				Array: []int{1, 20, 30, 40, 500},
+			},
+			expectedErr: ValidationErrors{
+				{
+					Field: "Array",
+					Err:   fmt.Errorf("[0]:число не может быть меньше 10"),
+				},
+				{
+					Field: "Array",
+					Err:   fmt.Errorf("[4]:число не может быть больше 100"),
+				},
+			},
+		},
+	}
+
+	RunTests(t, tests)
+}
+
+func RunTests(t *testing.T, tests []struct {
+	name        string
+	in          interface{}
+	expectedErr error
+}) {
+	t.Helper() // Указываем, что это вспомогательная функция
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("case %d: %s", i, tt.name), func(t *testing.T) {
 			tt := tt
@@ -182,14 +311,14 @@ func TestValidate(t *testing.T) {
 
 			err := Validate(tt.in)
 			if err != nil && tt.expectedErr == nil {
-				t.Errorf("expected no error, got %v", err)
+				t.Errorf("expected: no error, got: %v", err)
 			}
 			if err == nil && tt.expectedErr != nil {
-				t.Errorf("expected error %v, got none", tt.expectedErr)
+				t.Errorf("expected error: %v, got: none", tt.expectedErr)
 			}
 			if err != nil && tt.expectedErr != nil {
 				if !reflect.DeepEqual(err, tt.expectedErr) {
-					t.Errorf("expected error %v, got %v", tt.expectedErr, err)
+					t.Errorf("expected error: %v, got: %v", tt.expectedErr, err)
 				}
 			}
 			_ = tt

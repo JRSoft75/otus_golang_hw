@@ -1,6 +1,7 @@
 package hw09structvalidator
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -17,9 +18,11 @@ type ValidationErrors []ValidationError
 
 func (v ValidationErrors) Error() string {
 	result := ""
-	for _, validationError := range v {
+	for i, validationError := range v {
+		if i > 0 {
+			result += ", "
+		}
 		result += validationError.Err.Error()
-		result += "\n"
 	}
 	return result
 }
@@ -69,11 +72,32 @@ func validateField(field reflect.Value, validator string) error {
 	case reflect.Int:
 		return validateInt(int(field.Int()), validator)
 	case reflect.Slice:
-		for i := 0; i < field.Len(); i++ {
-			if err := validateField(field.Index(i), validator); err != nil {
-				return err
-			}
-		}
+		return validateSlice(field, validator)
+
+	case reflect.Bool:
+	case reflect.Int8:
+	case reflect.Int16:
+	case reflect.Int32:
+	case reflect.Int64:
+	case reflect.Uint:
+	case reflect.Uint8:
+	case reflect.Uint16:
+	case reflect.Uint32:
+	case reflect.Uint64:
+	case reflect.Float32:
+	case reflect.Float64:
+	case reflect.Invalid:
+	case reflect.Uintptr:
+	case reflect.Complex64:
+	case reflect.Complex128:
+	case reflect.Array:
+	case reflect.Chan:
+	case reflect.Func:
+	case reflect.Interface:
+	case reflect.Map:
+	case reflect.Ptr:
+	case reflect.Struct:
+	case reflect.UnsafePointer:
 	default:
 	}
 	return nil
@@ -125,5 +149,26 @@ func validateInt(value int, validator string) error {
 		}
 		return fmt.Errorf("число должно входить в множество: %s", strings.Join(options, ", "))
 	}
+	return nil
+}
+
+func validateSlice(field reflect.Value, validator string) error {
+	var fieldValidationErrors []string
+	for i := 0; i < field.Len(); i++ {
+		if err := validateField(field.Index(i), validator); err != nil {
+			fieldValidationErrors = append(fieldValidationErrors, fmt.Sprintf("[%d]:%s", i, err.Error()))
+		}
+	}
+	if len(fieldValidationErrors) > 0 {
+		result := ""
+		for i, fieldValidationError := range fieldValidationErrors {
+			if i > 0 {
+				result += ", "
+			}
+			result += fieldValidationError
+		}
+		return errors.New(result)
+	}
+
 	return nil
 }
