@@ -12,9 +12,10 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 	//nolint:gosec
 	command := exec.Command(cmd[0], cmd[1:]...)
 
-	// Устанавливаем стандартный вывод и стандартный вывод ошибок
+	// Устанавливаем стандартный ввод, вывод и стандартный вывод ошибок
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr
+	command.Stdin = os.Stdin
 
 	// Получаем список переменных окружения
 	envVars := os.Environ()
