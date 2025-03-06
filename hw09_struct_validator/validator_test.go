@@ -302,7 +302,8 @@ func RunTests(t *testing.T, tests []struct {
 	name        string
 	in          interface{}
 	expectedErr error
-}) {
+},
+) {
 	t.Helper() // Указываем, что это вспомогательная функция
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("case %d: %s", i, tt.name), func(t *testing.T) {
