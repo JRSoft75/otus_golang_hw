@@ -1,10 +1,10 @@
 package hw10programoptimization
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
-	"regexp"
 	"strings"
 )
 
@@ -31,35 +31,36 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 type users [100_000]User
 
 func getUsers(r io.Reader) (result users, err error) {
-	content, err := io.ReadAll(r)
-	if err != nil {
-		return
-	}
+	reader := bufio.NewReader(r)
+	for i := 0; i < len(result); i++ {
+		line, err := reader.ReadString('\n') // Читаем строку
+		if err == io.EOF {
+			break // Достигнут конец файла
+		}
+		if err != nil {
+			return result, nil
+		}
 
-	lines := strings.Split(string(content), "\n")
-	for i, line := range lines {
 		var user User
 		if err = json.Unmarshal([]byte(line), &user); err != nil {
-			return
+			return result, nil
 		}
 		result[i] = user
 	}
-	return
+
+	return result, nil
 }
 
 func countDomains(u users, domain string) (DomainStat, error) {
 	result := make(DomainStat)
 
 	for _, user := range u {
-		matched, err := regexp.Match("\\."+domain, []byte(user.Email))
-		if err != nil {
-			return nil, err
-		}
-
-		if matched {
-			num := result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])]
-			num++
-			result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])] = num
+		if strings.Contains(user.Email, domain) {
+			emailParts := strings.SplitN(user.Email, "@", 2)
+			if len(emailParts) < 2 {
+				continue // Пропускаем некорректные email
+			}
+			result[strings.ToLower(emailParts[1])]++
 		}
 	}
 	return result, nil
