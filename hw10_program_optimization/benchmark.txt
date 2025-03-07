@@ -1,0 +1,36 @@
+Before:
+go test -v -count=1 -timeout=30s -tags bench .
+=== RUN   TestGetDomainStat_Time_And_Memory
+    stats_optimization_test.go:46: time used: 448.812994ms / 300ms
+    stats_optimization_test.go:47: memory used: 308Mb / 30Mb
+    assertion_compare.go:332:
+                Error Trace:    stats_optimization_test.go:49
+                Error:          "448812994" is not less than "300000000"
+                Test:           TestGetDomainStat_Time_And_Memory
+                Messages:       [the program is too slow]
+--- FAIL: TestGetDomainStat_Time_And_Memory (10.22s)
+
+
+After (regexp.Match -> strings.Contains):
+=== RUN   TestGetDomainStat_Time_And_Memory
+    stats_optimization_test.go:46: time used: 349.492216ms / 300ms
+    stats_optimization_test.go:47: memory used: 175Mb / 30Mb
+    assertion_compare.go:332:
+                Error Trace:    stats_optimization_test.go:49
+                Error:          "349492216" is not less than "300000000"
+                Test:           TestGetDomainStat_Time_And_Memory
+                Messages:       [the program is too slow]
+--- FAIL: TestGetDomainStat_Time_And_Memory (6.91s)
+
+After use RWMutex:
+=== RUN   TestGetDomainStat_Time_And_Memory
+    stats_optimization_test.go:46: time used: 307.914137ms / 300ms
+    stats_optimization_test.go:47: memory used: 93Mb / 30Mb
+    assertion_compare.go:332:
+                Error Trace:    stats_optimization_test.go:49
+                Error:          "307914137" is not less than "300000000"
+                Test:           TestGetDomainStat_Time_And_Memory
+                Messages:       [the program is too slow]
+--- FAIL: TestGetDomainStat_Time_And_Memory (5.70s)
+
+

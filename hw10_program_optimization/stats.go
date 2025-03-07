@@ -3,9 +3,11 @@ package hw10programoptimization
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 )
 
 type User struct {
@@ -18,7 +20,13 @@ type User struct {
 	Address  string
 }
 
-type DomainStat map[string]int
+type (
+	DomainStat     map[string]int
+	DomainStatSync struct {
+		mu    sync.RWMutex   // Mutex для безопасного доступа к map
+		stats map[string]int // Храним статистику доменов
+	}
+)
 
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 	u, err := getUsers(r)
@@ -30,20 +38,26 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 
 type users [100_000]User
 
+func NewDomainStatSync() *DomainStatSync {
+	return &DomainStatSync{
+		stats: make(map[string]int),
+	}
+}
+
 func getUsers(r io.Reader) (result users, err error) {
 	reader := bufio.NewReader(r)
 	for i := 0; i < len(result); i++ {
 		line, err := reader.ReadString('\n') // Читаем строку
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break // Достигнут конец файла
 		}
 		if err != nil {
-			return result, nil
+			return result, err
 		}
 
 		var user User
 		if err = json.Unmarshal([]byte(line), &user); err != nil {
-			return result, nil
+			return result, err
 		}
 		result[i] = user
 	}
@@ -52,16 +66,26 @@ func getUsers(r io.Reader) (result users, err error) {
 }
 
 func countDomains(u users, domain string) (DomainStat, error) {
-	result := make(DomainStat)
+	var wg sync.WaitGroup
+	result := NewDomainStatSync()
 
 	for _, user := range u {
-		if strings.Contains(user.Email, domain) {
-			emailParts := strings.SplitN(user.Email, "@", 2)
-			if len(emailParts) < 2 {
-				continue // Пропускаем некорректные email
+		wg.Add(1)
+		go func(user User) {
+			defer wg.Done()
+			if strings.Contains(user.Email, domain) {
+				emailParts := strings.SplitN(user.Email, "@", 2)
+				if len(emailParts) < 2 {
+					return // Пропускаем некорректные email
+				}
+				domainPart := strings.ToLower(emailParts[1])
+
+				result.mu.Lock()
+				defer result.mu.Unlock()
+				result.stats[domainPart]++
 			}
-			result[strings.ToLower(emailParts[1])]++
-		}
+		}(user)
 	}
-	return result, nil
+	wg.Wait()
+	return result.stats, nil
 }
