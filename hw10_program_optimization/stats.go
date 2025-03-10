@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -53,7 +54,7 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 	jobs := make(chan User, 100)
 	domainStatSync := &DomainStatSync{stats: make(map[string]int)}
 	targetDomain := strings.ToLower(domain)
-	workerCount := 4
+	workerCount := runtime.NumCPU()
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		go func() {
