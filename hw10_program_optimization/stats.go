@@ -1,13 +1,15 @@
 package hw10programoptimization
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"runtime"
 	"strings"
 	"sync"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
 type User struct {
@@ -21,15 +23,6 @@ type (
 		stats map[string]int
 	}
 )
-
-// Используем пул объектов для повторного использования структуры User.
-var userPool = sync.Pool{
-	New: func() interface{} { return new(User) },
-}
-
-var domainPool = sync.Pool{
-	New: func() interface{} { return new(string) },
-}
 
 func (d *DomainStatSync) Increment(domain string) {
 	d.Lock()
@@ -49,10 +42,11 @@ func (d *DomainStatSync) ToMap() DomainStat {
 
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 	var wg sync.WaitGroup
-	jobs := make(chan User, 1024)
+	jobs := make(chan *User, 1024)
 	domainStatSync := &DomainStatSync{stats: make(map[string]int)}
 	targetDomain := strings.ToLower(domain)
 	workerCount := runtime.NumCPU()
+	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		go func() {
@@ -72,30 +66,25 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 				}
 
 				if domainPartLower[len(domainPartLower)-len(targetDomain):] == targetDomain {
-					domain := domainPool.Get().(*string)
-					*domain = domainPartLower
-					domainStatSync.Increment(*domain)
-					domainPool.Put(domain)
+					domainStatSync.Increment(domainPartLower)
 				}
 			}
 		}()
 	}
 
+	// Парсим JSON с помощью jsoniter
 	decoder := json.NewDecoder(r)
-	var user *User
 	for {
-		user = userPool.Get().(*User)
+		user := &User{}
 		err := decoder.Decode(user)
 		if err != nil {
-			userPool.Put(user)
 			close(jobs)
 			if errors.Is(err, io.EOF) {
 				break
 			}
 			return nil, fmt.Errorf("decoding error: %w", err)
 		}
-		jobs <- *user
-		userPool.Put(user)
+		jobs <- user
 	}
 
 	wg.Wait()
