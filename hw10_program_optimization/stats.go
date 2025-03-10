@@ -23,8 +23,7 @@ type User struct {
 type (
 	DomainStat     map[string]int
 	DomainStatSync struct {
-		mu    sync.RWMutex   // Mutex для безопасного доступа к map
-		stats map[string]int // Храним статистику доменов
+		m sync.Map // Используем sync.Map для безопасного параллельного доступа
 	}
 )
 
@@ -39,12 +38,11 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 type users [100_000]User
 
 func NewDomainStatSync() *DomainStatSync {
-	return &DomainStatSync{
-		stats: make(map[string]int),
-	}
+	return &DomainStatSync{}
 }
 
 func getUsers(r io.Reader) (result users, err error) {
+	//var result users
 	reader := bufio.NewReader(r)
 	for i := 0; i < len(result); i++ {
 		line, err := reader.ReadString('\n') // Читаем строку
@@ -52,14 +50,15 @@ func getUsers(r io.Reader) (result users, err error) {
 			break // Достигнут конец файла
 		}
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("error reading line: %w", err)
 		}
 
 		var user User
 		if err = json.Unmarshal([]byte(line), &user); err != nil {
-			return result, err
+			continue
 		}
 		result[i] = user
+		//result = append(result, user)
 	}
 
 	return result, nil
@@ -67,7 +66,7 @@ func getUsers(r io.Reader) (result users, err error) {
 
 func countDomains(u users, domain string) (DomainStat, error) {
 	var wg sync.WaitGroup
-	result := NewDomainStatSync()
+	domainStatSync := NewDomainStatSync()
 
 	for _, user := range u {
 		wg.Add(1)
@@ -80,12 +79,17 @@ func countDomains(u users, domain string) (DomainStat, error) {
 				}
 				domainPart := strings.ToLower(emailParts[1])
 
-				result.mu.Lock()
-				defer result.mu.Unlock()
-				result.stats[domainPart]++
+				count, _ := domainStatSync.m.LoadOrStore(domainPart, 0) // Получаем текущее значение или создаем новое
+				//count, _ := domainStatSync.m.Load(domainPart)
+				domainStatSync.m.Store(domainPart, count.(int)+1) // Увеличиваем счетчик
 			}
 		}(user)
 	}
 	wg.Wait()
-	return result.stats, nil
+	result := make(map[string]int)
+	domainStatSync.m.Range(func(key, value interface{}) bool {
+		result[key.(string)] = value.(int)
+		return true // Продолжаем итерацию
+	})
+	return result, nil
 }
