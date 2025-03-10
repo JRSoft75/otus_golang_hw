@@ -65,6 +65,13 @@ PASS
     stats_optimization_test.go:47: memory used: 4Mb / 30Mb
 --- PASS: TestGetDomainStat_Time_And_Memory (3.09s)
 
+12.
+=== RUN   TestGetDomainStat_Time_And_Memory
+    stats_optimization_test.go:46: time used: 149.175806ms / 300ms
+    stats_optimization_test.go:47: memory used: 6Mb / 30Mb
+--- PASS: TestGetDomainStat_Time_And_Memory (1.80s)
+
+
 
 
 
