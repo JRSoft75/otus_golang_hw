@@ -11,13 +11,7 @@ import (
 )
 
 type User struct {
-	ID       int
-	Name     string
-	Username string
-	Email    string
-	Phone    string
-	Password string
-	Address  string
+	Email string `json:"email"`
 }
 
 type (
@@ -51,7 +45,7 @@ func (d *DomainStatSync) ToMap() DomainStat {
 
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 	var wg sync.WaitGroup
-	jobs := make(chan User, 100)
+	jobs := make(chan User, 1024)
 	domainStatSync := &DomainStatSync{stats: make(map[string]int)}
 	targetDomain := strings.ToLower(domain)
 	workerCount := runtime.NumCPU()
