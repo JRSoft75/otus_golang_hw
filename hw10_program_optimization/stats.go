@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 type User struct {
@@ -22,25 +23,31 @@ type User struct {
 type (
 	DomainStat     map[string]int
 	DomainStatSync struct {
-		mu    sync.RWMutex   // Mutex для безопасного доступа к map
-		stats map[string]int // Храним статистику доменов
+		stats sync.Map
 	}
 )
 
+func (d *DomainStatSync) Increment(domain string) {
+	val, _ := d.stats.LoadOrStore(domain, &atomic.Int64{})
+	counter := val.(*atomic.Int64)
+	counter.Add(1)
+}
+
+func (d *DomainStatSync) ToMap() DomainStat {
+	result := make(DomainStat)
+	d.stats.Range(func(key, value any) bool {
+		result[key.(string)] = int(value.(*atomic.Int64).Load())
+		return true
+	})
+	return result
+}
+
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
-	u, err := getUsers(r)
+	users, err := getUsers(r)
 	if err != nil {
 		return nil, fmt.Errorf("get users error: %w", err)
 	}
-	return countDomains(u, domain)
-}
-
-//type users [100_000]User
-
-func NewDomainStatSync() *DomainStatSync {
-	return &DomainStatSync{
-		stats: make(map[string]int),
-	}
+	return countDomains(users, domain)
 }
 
 func getUsers(r io.Reader) ([]User, error) {
@@ -62,27 +69,34 @@ func getUsers(r io.Reader) ([]User, error) {
 
 func countDomains(u []User, domain string) (DomainStat, error) {
 	var wg sync.WaitGroup
-	result := NewDomainStatSync()
+	domainStatSync := &DomainStatSync{}
 	targetDomain := strings.ToLower(domain)
 
-	for _, user := range u {
-		wg.Add(1)
-		go func(user User) {
-			defer wg.Done()
-			email := strings.ToLower(user.Email)
-			if strings.Contains(email, targetDomain) {
-				emailParts := strings.SplitN(user.Email, "@", 2)
-				if len(emailParts) < 2 {
-					return // Пропускаем некорректные email
-				}
-				domainPart := strings.ToLower(emailParts[1])
+	workerCount := 4 // Количество воркеров
+	jobs := make(chan User, workerCount*100)
 
-				result.mu.Lock()
-				defer result.mu.Unlock()
-				result.stats[domainPart]++
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for user := range jobs {
+				email := strings.ToLower(user.Email)
+				if strings.HasSuffix(email, targetDomain) {
+					emailParts := strings.SplitN(email, "@", 2)
+					if len(emailParts) == 2 {
+						domainPart := emailParts[1]
+						domainStatSync.Increment(domainPart)
+					}
+				}
 			}
-		}(user)
+		}()
 	}
+
+	for _, user := range u {
+		jobs <- user
+	}
+	close(jobs)
+
 	wg.Wait()
-	return result.stats, nil
+	return domainStatSync.ToMap(), nil
 }
