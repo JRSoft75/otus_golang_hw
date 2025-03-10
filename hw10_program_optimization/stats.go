@@ -27,6 +27,10 @@ var userPool = sync.Pool{
 	New: func() interface{} { return new(User) },
 }
 
+var domainPool = sync.Pool{
+	New: func() interface{} { return new(string) },
+}
+
 func (d *DomainStatSync) Increment(domain string) {
 	d.Lock()
 	defer d.Unlock()
@@ -54,11 +58,24 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 		go func() {
 			defer wg.Done()
 			for user := range jobs {
-				email := strings.ToLower(user.Email)
-				if strings.HasSuffix(email, targetDomain) {
-					if parts := strings.SplitN(email, "@", 2); len(parts) == 2 {
-						domainStatSync.Increment(parts[1])
-					}
+				email := user.Email
+				atIndex := strings.LastIndex(email, "@")
+				if atIndex == -1 || atIndex == len(email)-1 {
+					continue
+				}
+
+				domainPart := email[atIndex+1:]
+				domainPartLower := strings.ToLower(domainPart)
+
+				if len(domainPartLower) < len(targetDomain) {
+					continue
+				}
+
+				if domainPartLower[len(domainPartLower)-len(targetDomain):] == targetDomain {
+					domain := domainPool.Get().(*string)
+					*domain = domainPartLower
+					domainStatSync.Increment(*domain)
+					domainPool.Put(domain)
 				}
 			}
 		}()
