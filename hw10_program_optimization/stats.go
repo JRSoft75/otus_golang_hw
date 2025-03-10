@@ -1,66 +1,91 @@
 package hw10programoptimization
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
-	"regexp"
+	"runtime"
 	"strings"
+	"sync"
+
+	jsoniter "github.com/json-iterator/go" //nolint:depguard
 )
 
 type User struct {
-	ID       int
-	Name     string
-	Username string
-	Email    string
-	Phone    string
-	Password string
-	Address  string
+	Email string `json:"email"`
 }
 
-type DomainStat map[string]int
+type (
+	DomainStat     map[string]int
+	DomainStatSync struct {
+		sync.Mutex
+		stats map[string]int
+	}
+)
+
+func (d *DomainStatSync) Increment(domain string) {
+	d.Lock()
+	defer d.Unlock()
+	d.stats[domain]++
+}
+
+func (d *DomainStatSync) ToMap() DomainStat {
+	d.Lock()
+	defer d.Unlock()
+	result := make(DomainStat, len(d.stats))
+	for k, v := range d.stats {
+		result[k] = v
+	}
+	return result
+}
 
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
-	u, err := getUsers(r)
-	if err != nil {
-		return nil, fmt.Errorf("get users error: %w", err)
+	var wg sync.WaitGroup
+	jobs := make(chan *User, 1024)
+	domainStatSync := &DomainStatSync{stats: make(map[string]int)}
+	targetDomain := strings.ToLower(domain)
+	workerCount := runtime.NumCPU()
+	json := jsoniter.ConfigCompatibleWithStandardLibrary
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for user := range jobs {
+				email := user.Email
+				atIndex := strings.LastIndex(email, "@")
+				if atIndex == -1 || atIndex == len(email)-1 {
+					continue
+				}
+
+				domainPart := email[atIndex+1:]
+				domainPartLower := strings.ToLower(domainPart)
+
+				if len(domainPartLower) < len(targetDomain) {
+					continue
+				}
+
+				if domainPartLower[len(domainPartLower)-len(targetDomain):] == targetDomain {
+					domainStatSync.Increment(domainPartLower)
+				}
+			}
+		}()
 	}
-	return countDomains(u, domain)
-}
 
-type users [100_000]User
-
-func getUsers(r io.Reader) (result users, err error) {
-	content, err := io.ReadAll(r)
-	if err != nil {
-		return
-	}
-
-	lines := strings.Split(string(content), "\n")
-	for i, line := range lines {
-		var user User
-		if err = json.Unmarshal([]byte(line), &user); err != nil {
-			return
-		}
-		result[i] = user
-	}
-	return
-}
-
-func countDomains(u users, domain string) (DomainStat, error) {
-	result := make(DomainStat)
-
-	for _, user := range u {
-		matched, err := regexp.Match("\\."+domain, []byte(user.Email))
+	// Парсим JSON с помощью jsoniter
+	decoder := json.NewDecoder(r)
+	for {
+		user := &User{}
+		err := decoder.Decode(user)
 		if err != nil {
-			return nil, err
+			close(jobs)
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, fmt.Errorf("decoding error: %w", err)
 		}
-
-		if matched {
-			num := result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])]
-			num++
-			result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])] = num
-		}
+		jobs <- user
 	}
-	return result, nil
+
+	wg.Wait()
+	return domainStatSync.ToMap(), nil
 }
