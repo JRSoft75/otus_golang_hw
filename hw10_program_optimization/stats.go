@@ -1,7 +1,6 @@
 package hw10programoptimization
 
 import (
-	//"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -9,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	jsoniter "github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go" //nolint:depguard
 )
 
 type User struct {
@@ -46,7 +45,7 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 	domainStatSync := &DomainStatSync{stats: make(map[string]int)}
 	targetDomain := strings.ToLower(domain)
 	workerCount := runtime.NumCPU()
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
+	json := jsoniter.ConfigCompatibleWithStandardLibrary
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		go func() {
