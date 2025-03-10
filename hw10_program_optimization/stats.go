@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"sync/atomic"
 )
 
 type User struct {
@@ -24,7 +23,8 @@ type User struct {
 type (
 	DomainStat     map[string]int
 	DomainStatSync struct {
-		stats sync.Map
+		sync.Mutex
+		stats map[string]int
 	}
 )
 
@@ -34,24 +34,25 @@ var userPool = sync.Pool{
 }
 
 func (d *DomainStatSync) Increment(domain string) {
-	val, _ := d.stats.LoadOrStore(domain, &atomic.Int64{})
-	counter := val.(*atomic.Int64)
-	counter.Add(1)
+	d.Lock()
+	defer d.Unlock()
+	d.stats[domain]++
 }
 
 func (d *DomainStatSync) ToMap() DomainStat {
-	result := make(DomainStat)
-	d.stats.Range(func(key, value any) bool {
-		result[key.(string)] = int(value.(*atomic.Int64).Load())
-		return true
-	})
+	d.Lock()
+	defer d.Unlock()
+	result := make(DomainStat, len(d.stats))
+	for k, v := range d.stats {
+		result[k] = v
+	}
 	return result
 }
 
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 	var wg sync.WaitGroup
 	jobs := make(chan User, 100)
-	domainStatSync := &DomainStatSync{}
+	domainStatSync := &DomainStatSync{stats: make(map[string]int)}
 	targetDomain := strings.ToLower(domain)
 	workerCount := runtime.NumCPU()
 	for i := 0; i < workerCount; i++ {
