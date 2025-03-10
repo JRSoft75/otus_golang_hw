@@ -43,38 +43,11 @@ func (d *DomainStatSync) ToMap() DomainStat {
 }
 
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
-	users, err := getUsers(r)
-	if err != nil {
-		return nil, fmt.Errorf("get users error: %w", err)
-	}
-	return countDomains(users, domain)
-}
-
-func getUsers(r io.Reader) ([]User, error) {
-	var users []User
-	decoder := json.NewDecoder(r)
-	for {
-		var user User
-		err := decoder.Decode(&user)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			return users, fmt.Errorf("error decoding user: %w", err)
-		}
-		users = append(users, user)
-	}
-	return users, nil
-}
-
-func countDomains(u []User, domain string) (DomainStat, error) {
 	var wg sync.WaitGroup
+	jobs := make(chan User, 100)
 	domainStatSync := &DomainStatSync{}
 	targetDomain := strings.ToLower(domain)
-
-	workerCount := 4 // Количество воркеров
-	jobs := make(chan User, workerCount*100)
-
+	workerCount := 4
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		go func() {
@@ -82,20 +55,27 @@ func countDomains(u []User, domain string) (DomainStat, error) {
 			for user := range jobs {
 				email := strings.ToLower(user.Email)
 				if strings.HasSuffix(email, targetDomain) {
-					emailParts := strings.SplitN(email, "@", 2)
-					if len(emailParts) == 2 {
-						domainPart := emailParts[1]
-						domainStatSync.Increment(domainPart)
+					if parts := strings.SplitN(email, "@", 2); len(parts) == 2 {
+						domainStatSync.Increment(parts[1])
 					}
 				}
 			}
 		}()
 	}
 
-	for _, user := range u {
+	decoder := json.NewDecoder(r)
+	for {
+		var user User
+		err := decoder.Decode(&user)
+		if err != nil {
+			close(jobs)
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, fmt.Errorf("decoding error: %w", err)
+		}
 		jobs <- user
 	}
-	close(jobs)
 
 	wg.Wait()
 	return domainStatSync.ToMap(), nil

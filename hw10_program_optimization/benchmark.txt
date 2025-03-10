@@ -46,5 +46,13 @@ After use json.NewDecoder(r):
 FAIL
 FAIL    github.com/JRSoft75/otus_golang_hw/hw10_program_optimization    5.281s
 
+After optimization:
+=== RUN   TestGetDomainStat_Time_And_Memory
+    stats_optimization_test.go:46: time used: 281.391305ms / 300ms
+    stats_optimization_test.go:47: memory used: 24Mb / 30Mb
+--- PASS: TestGetDomainStat_Time_And_Memory (4.53s)
+PASS
+
+
 
 
