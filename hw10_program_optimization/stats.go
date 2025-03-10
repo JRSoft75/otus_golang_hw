@@ -1,7 +1,6 @@
 package hw10programoptimization
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,7 +22,8 @@ type User struct {
 type (
 	DomainStat     map[string]int
 	DomainStatSync struct {
-		m sync.Map // Используем sync.Map для безопасного параллельного доступа
+		mu    sync.RWMutex   // Mutex для безопасного доступа к map
+		stats map[string]int // Храним статистику доменов
 	}
 )
 
@@ -35,61 +35,54 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 	return countDomains(u, domain)
 }
 
-type users [100_000]User
+//type users [100_000]User
 
 func NewDomainStatSync() *DomainStatSync {
-	return &DomainStatSync{}
-}
-
-func getUsers(r io.Reader) (result users, err error) {
-	//var result users
-	reader := bufio.NewReader(r)
-	for i := 0; i < len(result); i++ {
-		line, err := reader.ReadString('\n') // Читаем строку
-		if errors.Is(err, io.EOF) {
-			break // Достигнут конец файла
-		}
-		if err != nil {
-			return result, fmt.Errorf("error reading line: %w", err)
-		}
-
-		var user User
-		if err = json.Unmarshal([]byte(line), &user); err != nil {
-			continue
-		}
-		result[i] = user
-		//result = append(result, user)
+	return &DomainStatSync{
+		stats: make(map[string]int),
 	}
-
-	return result, nil
 }
 
-func countDomains(u users, domain string) (DomainStat, error) {
+func getUsers(r io.Reader) ([]User, error) {
+	var users []User
+	decoder := json.NewDecoder(r)
+	for {
+		var user User
+		err := decoder.Decode(&user)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return users, fmt.Errorf("error decoding user: %w", err)
+		}
+		users = append(users, user)
+	}
+	return users, nil
+}
+
+func countDomains(u []User, domain string) (DomainStat, error) {
 	var wg sync.WaitGroup
-	domainStatSync := NewDomainStatSync()
+	result := NewDomainStatSync()
+	targetDomain := strings.ToLower(domain)
 
 	for _, user := range u {
 		wg.Add(1)
 		go func(user User) {
 			defer wg.Done()
-			if strings.Contains(user.Email, domain) {
+			email := strings.ToLower(user.Email)
+			if strings.Contains(email, targetDomain) {
 				emailParts := strings.SplitN(user.Email, "@", 2)
 				if len(emailParts) < 2 {
 					return // Пропускаем некорректные email
 				}
 				domainPart := strings.ToLower(emailParts[1])
 
-				count, _ := domainStatSync.m.LoadOrStore(domainPart, 0) // Получаем текущее значение или создаем новое
-				//count, _ := domainStatSync.m.Load(domainPart)
-				domainStatSync.m.Store(domainPart, count.(int)+1) // Увеличиваем счетчик
+				result.mu.Lock()
+				defer result.mu.Unlock()
+				result.stats[domainPart]++
 			}
 		}(user)
 	}
 	wg.Wait()
-	result := make(map[string]int)
-	domainStatSync.m.Range(func(key, value interface{}) bool {
-		result[key.(string)] = value.(int)
-		return true // Продолжаем итерацию
-	})
-	return result, nil
+	return result.stats, nil
 }
