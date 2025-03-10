@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -27,6 +28,11 @@ type (
 	}
 )
 
+// Используем пул объектов для повторного использования структуры User.
+var userPool = sync.Pool{
+	New: func() interface{} { return new(User) },
+}
+
 func (d *DomainStatSync) Increment(domain string) {
 	val, _ := d.stats.LoadOrStore(domain, &atomic.Int64{})
 	counter := val.(*atomic.Int64)
@@ -47,7 +53,7 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 	jobs := make(chan User, 100)
 	domainStatSync := &DomainStatSync{}
 	targetDomain := strings.ToLower(domain)
-	workerCount := 4
+	workerCount := runtime.NumCPU()
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		go func() {
@@ -64,17 +70,20 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 	}
 
 	decoder := json.NewDecoder(r)
+	var user *User
 	for {
-		var user User
-		err := decoder.Decode(&user)
+		user = userPool.Get().(*User)
+		err := decoder.Decode(user)
 		if err != nil {
+			userPool.Put(user)
 			close(jobs)
 			if errors.Is(err, io.EOF) {
 				break
 			}
 			return nil, fmt.Errorf("decoding error: %w", err)
 		}
-		jobs <- user
+		jobs <- *user
+		userPool.Put(user)
 	}
 
 	wg.Wait()
