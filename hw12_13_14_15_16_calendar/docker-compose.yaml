@@ -1,0 +1,32 @@
+services:
+  pg:
+    image: postgres:13.7-alpine
+    container_name: calendar-postgres
+    volumes:
+      - postgres_volume:/var/lib/postgresql/data
+    environment:
+      - "POSTGRES_DB=${PG_DATABASE_NAME}"
+      - "POSTGRES_USER=${PG_USER}"
+      - "POSTGRES_PASSWORD=${PG_PASSWORD}"
+    ports:
+      - "${PG_PORT}:5432"
+
+  migrator:
+    build:
+      context: .
+      dockerfile: migration.Dockerfile
+    container_name: calendar-migrator
+    restart: on-failure
+    environment:
+      DB_HOST: pg
+
+  rabbitmq:
+    container_name: calendar-rabbitmq
+    image: rabbitmq:management
+    ports:
+      - "${RABBIT_WEB_PORT}:15672"
+      - "${RABBIT_PORT}:5672"
+
+volumes:
+  postgres_volume:
+

@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	release   = "UNKNOWN"
-	buildDate = "UNKNOWN"
+	release   = "1.0.0"
+	buildDate = "01.01.2025"
 	gitHash   = "UNKNOWN"
 )
 
