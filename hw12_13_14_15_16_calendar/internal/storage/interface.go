@@ -8,7 +8,7 @@ type Storage interface {
 	AddEvent(event *Event) error
 
 	// UpdateEvent обновляет существующее событие в хранилище.
-	UpdateEvent(id string, event *Event) error
+	UpdateEvent(event *Event) error
 
 	// DeleteEvent удаляет событие из хранилища.
 	DeleteEvent(id string) error

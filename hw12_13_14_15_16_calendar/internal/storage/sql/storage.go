@@ -47,7 +47,7 @@ func (s *SQLStorage) AddEvent(event *storage.Event) error {
 }
 
 // UpdateEvent обновляет существующее событие в базу данных.
-func (s *SQLStorage) UpdateEvent(id string, event *storage.Event) error {
+func (s *SQLStorage) UpdateEvent(event *storage.Event) error {
 	if err := event.Validate(); err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func (s *SQLStorage) UpdateEvent(id string, event *storage.Event) error {
 		notifyBefore.Int64 = int64(*event.NotifyBefore)
 	}
 
-	_, err := s.db.Exec(query, event.Title, description, event.UserID, event.StartAt, event.EndAt, notifyBefore, id)
+	_, err := s.db.Exec(query, event.Title, description, event.UserID, event.StartAt, event.EndAt, notifyBefore, event.ID)
 	if err != nil {
 		return fmt.Errorf("failed to update event: %w", err)
 	}

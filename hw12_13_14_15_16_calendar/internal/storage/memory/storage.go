@@ -37,7 +37,7 @@ func (s *InMemoryStorage) AddEvent(event *storage.Event) error {
 }
 
 // UpdateEvent обновляет существующее событие в хранилище.
-func (s *InMemoryStorage) UpdateEvent(id string, event *storage.Event) error {
+func (s *InMemoryStorage) UpdateEvent(event *storage.Event) error {
 	if err := event.Validate(); err != nil {
 		return err
 	}
@@ -45,15 +45,15 @@ func (s *InMemoryStorage) UpdateEvent(id string, event *storage.Event) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.events[id]; !exists {
+	if _, exists := s.events[event.ID]; !exists {
 		return storage.ErrEventNotFound
 	}
 
-	if s.isTimeOverlapping(event.StartAt, event.EndAt, id) {
+	if s.isTimeOverlapping(event.StartAt, event.EndAt, event.ID) {
 		return storage.ErrDateBusy
 	}
 
-	s.events[id] = event
+	s.events[event.ID] = event
 	return nil
 }
 
