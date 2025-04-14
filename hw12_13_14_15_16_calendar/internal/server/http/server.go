@@ -27,7 +27,7 @@ type Server struct {
 
 func NewServer(
 	logger Logger,
-	app Application,
+	_ Application,
 	baseURL string,
 	port int,
 	readTimeout time.Duration,
@@ -42,8 +42,8 @@ func NewServer(
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", baseURL, port),
 		Handler:      r,
-		ReadTimeout:  readTimeout * time.Second,
-		WriteTimeout: writeTimeout * time.Second,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
 	}
 	return &Server{
 		server: server,
