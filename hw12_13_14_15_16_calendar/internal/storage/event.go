@@ -15,9 +15,7 @@ type Event struct {
 	NotifyBefore *time.Duration `json:"notifyBefore"` // За сколько времени высылать уведомление (опционально)
 }
 
-var (
-	ErrInvalidEvent = errors.New("invalid event data")
-)
+var ErrInvalidEvent = errors.New("invalid event data")
 
 // Validate проверяет корректность данных события.
 func (e *Event) Validate() error {

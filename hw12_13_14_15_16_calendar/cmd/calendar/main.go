@@ -4,25 +4,25 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/config"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/app"
-	"github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/logger"
-	internalhttp "github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/server/http"
-	storagePackage "github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/storage"
-	memorystorage "github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/storage/memory"
-	sqlstorage "github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/storage/sql"
-	"github.com/spf13/cobra"
+	"github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/app"                          //nolint:depguard
+	"github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/config"                       //nolint:depguard
+	"github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/logger"                       //nolint:depguard
+	internalhttp "github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/server/http"     //nolint:depguard
+	storagePackage "github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/storage"       //nolint:depguard
+	memorystorage "github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/storage/memory" //nolint:depguard
+	sqlstorage "github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/storage/sql"       //nolint:depguard
+	"github.com/spf13/cobra"                                                                             //nolint:depguard
 )
 
-//var configFile string
+// var configFile string
 
-//func init() {
+// func init() {
 //	flag.StringVar(&configFile, "config", "/etc/calendar/config.yaml", "Path to configuration file")
 //}
 
@@ -33,7 +33,7 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   "calendar",
 		Short: "Calendar service",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			if versionFlag {
 				printVersion()
 				return
@@ -66,7 +66,14 @@ func main() {
 
 			logg.Info("calendar is running...")
 			calendar := app.New(logg, storage)
-			server := internalhttp.NewServer(logg, calendar, cfg.Server.Host, cfg.Server.Port, time.Duration(cfg.Server.ReadTimeout), time.Duration(cfg.Server.WriteTimeout))
+			server := internalhttp.NewServer(
+				logg,
+				calendar,
+				cfg.Server.Host,
+				cfg.Server.Port,
+				time.Duration(cfg.Server.ReadTimeout),
+				time.Duration(cfg.Server.WriteTimeout),
+			)
 
 			ctx, cancel := signal.NotifyContext(context.Background(),
 				syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
@@ -95,13 +102,12 @@ func main() {
 
 	// Флаг --version
 	rootCmd.Flags().BoolVar(&versionFlag, "version", false, "print the version of the application")
-	//err := rootCmd.MarkFlagRequired("config")
-	//if err != nil {
+	// err := rootCmd.MarkFlagRequired("config")
+	// if err != nil {
 	//	return
-	//}
+	// }
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatalf("command execution failed: %v", err)
 	}
-
 }

@@ -2,9 +2,10 @@ package internalhttp
 
 import (
 	"fmt"
-	"github.com/go-chi/chi/middleware"
 	"net/http"
 	"time"
+
+	"github.com/go-chi/chi/middleware" //nolint:depguard
 )
 
 func LoggingMiddleware(logger Logger) func(next http.Handler) http.Handler {

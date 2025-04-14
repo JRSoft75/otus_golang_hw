@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-chi/chi"
 	"io"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/go-chi/chi" //nolint:depguard
 )
 
 type Logger interface {
@@ -18,14 +19,20 @@ type Logger interface {
 	Debug(msg string)
 }
 
-type Application interface {
-}
+type Application interface{}
 
 type Server struct {
 	server *http.Server
 }
 
-func NewServer(logger Logger, app Application, baseURL string, port int, readTimeout, writeTimeout time.Duration) *Server {
+func NewServer(
+	logger Logger,
+	app Application,
+	baseURL string,
+	port int,
+	readTimeout time.Duration,
+	writeTimeout time.Duration,
+) *Server {
 	r := chi.NewRouter()
 	r.Use(LoggingMiddleware(logger))
 	r.Route("/", func(r chi.Router) {
@@ -73,7 +80,6 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("responce marshal error: %s", err)
+		log.Printf("response marshal error: %s", err)
 	}
-	return
 }

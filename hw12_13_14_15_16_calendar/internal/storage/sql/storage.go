@@ -3,9 +3,10 @@ package storage
 import (
 	"database/sql"
 	"fmt"
-	"github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/storage"
-	_ "github.com/jackc/pgx/stdlib"
 	"time"
+
+	"github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/storage" //nolint:depguard
+	_ "github.com/jackc/pgx/stdlib"                                                 // justifying it
 )
 
 // SQLStorage реализует интерфейс Storage, используя базу данных SQL.
@@ -101,7 +102,14 @@ func (s *SQLStorage) GetEventsByTimeRange(startTime, endTime time.Time) ([]*stor
 	var events []*storage.Event
 	for rows.Next() {
 		var event storage.Event
-		err := rows.Scan(&event.ID, &event.Title, &event.Description, &event.UserID, &event.StartAt, &event.EndAt, &event.NotifyBefore)
+		err := rows.Scan(
+			&event.ID,
+			&event.Title,
+			&event.Description,
+			&event.UserID,
+			&event.StartAt,
+			&event.EndAt,
+			&event.NotifyBefore)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan event: %w", err)
 		}
@@ -120,7 +128,14 @@ func (s *SQLStorage) GetEventByID(id string) (*storage.Event, error) {
 	row := s.db.QueryRow(query, id)
 
 	var event storage.Event
-	err := row.Scan(&event.ID, &event.Title, &event.Description, &event.UserID, &event.StartAt, &event.EndAt, &event.NotifyBefore)
+	err := row.Scan(
+		&event.ID,
+		&event.Title,
+		&event.Description,
+		&event.UserID,
+		&event.StartAt,
+		&event.EndAt,
+		&event.NotifyBefore)
 	if err == sql.ErrNoRows {
 		return nil, storage.ErrEventNotFound
 	} else if err != nil {

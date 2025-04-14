@@ -3,7 +3,6 @@ package logger
 import (
 	"fmt"
 	"log"
-	//"os"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -35,7 +34,7 @@ func New(level string) (*Logger, error) {
 
 	zapLogger, err := config.Build()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create logger: %v", err)
+		return nil, fmt.Errorf("failed to create logger: %w", err)
 	}
 
 	return &Logger{zapLogger}, nil

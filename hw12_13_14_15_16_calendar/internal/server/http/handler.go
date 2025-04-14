@@ -43,7 +43,6 @@ func (s *Service) Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	return
 }
 
 func WriteResponse(w http.ResponseWriter, resp *Response) {
@@ -51,8 +50,6 @@ func WriteResponse(w http.ResponseWriter, resp *Response) {
 
 	err := json.NewEncoder(w).Encode(resp)
 	if err != nil {
-		log.Printf("responce marshal error: %s", err)
+		log.Printf("response marshal error: %s", err)
 	}
-
-	return
 }

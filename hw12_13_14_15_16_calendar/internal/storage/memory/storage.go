@@ -1,9 +1,10 @@
 package storage
 
 import (
-	"github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/storage"
 	"sync"
 	"time"
+
+	"github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/storage" //nolint:depguard
 )
 
 // InMemoryStorage реализует интерфейс Storage, храня события в памяти.

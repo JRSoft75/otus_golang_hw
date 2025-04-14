@@ -2,11 +2,12 @@ package storage
 
 import (
 	"fmt"
-	"github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/storage"
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/JRSoft75/otus_golang_hw/hw12_13_14_15_16_calendar/internal/storage" //nolint:depguard
+	"github.com/stretchr/testify/assert"
 )
 
 // MockEvent для тестирования.

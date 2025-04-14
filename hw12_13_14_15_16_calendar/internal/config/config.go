@@ -23,8 +23,8 @@ type DatabaseConfig struct {
 type ServerConfig struct {
 	Host         string `yaml:"host"`
 	Port         int    `yaml:"port"`
-	ReadTimeout  int    `yaml:"read_timeout"`
-	WriteTimeout int    `yaml:"write_timeout"`
+	ReadTimeout  int    `yaml:"readTimeout"`
+	WriteTimeout int    `yaml:"writeTimeout"`
 }
 
 // Config представляет основную структуру конфигурации сервиса.
@@ -46,13 +46,13 @@ func LoadConfig(filePath string) (*Config, error) {
 	// Чтение содержимого файла
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %v", err)
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
 	// Парсинг YAML
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
 	return &cfg, nil
