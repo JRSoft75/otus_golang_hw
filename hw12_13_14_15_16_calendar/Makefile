@@ -1,4 +1,4 @@
-include .env
+#include .env
 
 LOCAL_BIN:=$(CURDIR)/bin
 
