@@ -1,5 +1,14 @@
-[logger]
-level = "INFO"
-
-# TODO
-# ...
+logger:
+  level: "info"
+database:
+  host: "localhost"
+  port: 5432
+  username: "user"
+  password: "password"
+storage:
+  type: "in-memory" #  "sql" | "in-memory"
+server:
+  host: "localhost"
+  port: 8080
+  read_timeout: 10
+  write_timeout: 10
