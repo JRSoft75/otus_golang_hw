@@ -40,21 +40,28 @@ func main() {
 		_ = client.Close()
 	}(client)
 
-	fmt.Printf("Connected to %s\n", address)
+	_, _ = fmt.Fprintf(os.Stderr, "Connected to %s\n", address)
 
-	done := make(chan struct{})
+	sendDone := make(chan struct{})
+	receiveDone := make(chan struct{})
 
 	// Горутина для чтения данных из сокета и вывода в STDOUT
 	go func() {
 		err := client.Receive()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				fmt.Println("\nServer closed the connection.")
+				_, err := fmt.Fprintln(os.Stderr, "\nServer closed the connection.")
+				if err != nil {
+					return
+				}
 			} else {
-				fmt.Printf("\nReceive error: %v\n", err)
+				_, err := fmt.Fprintf(os.Stderr, "\nReceive error: %v\n", err)
+				if err != nil {
+					return
+				}
 			}
 		}
-		close(done)
+		close(receiveDone)
 	}()
 
 	// Горутина для записи данных из STDIN в сокет
@@ -62,19 +69,37 @@ func main() {
 		err := client.Send()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				fmt.Println("\nEOF detected. Closing connection.")
+				_, err := fmt.Fprintln(os.Stderr, "\nEOF detected. Closing connection.")
+				if err != nil {
+					return
+				}
 			} else {
-				fmt.Printf("\nSend error: %v\n", err)
+				_, err := fmt.Fprintf(os.Stderr, "\nSend error: %v\n", err)
+				if err != nil {
+					return
+				}
 			}
 		}
-		close(done)
+		close(sendDone)
 	}()
 
 	// Ожидание завершения работы программы
 	select {
-	case <-done:
-		fmt.Println("Connection closed.")
+	case <-sendDone:
+		// Ждем завершения receive
+		<-receiveDone
+		_, _ = fmt.Fprintln(os.Stderr, "Send and receive completed.")
+	case <-receiveDone:
+		// Ждем завершения send
+		<-sendDone
+		_, err := fmt.Fprintln(os.Stderr, "Receive and send completed.")
+		if err != nil {
+			return
+		}
 	case <-ctx.Done():
-		fmt.Println("\nInterrupt signal received. Exiting...")
+		_, err := fmt.Fprintln(os.Stderr, "\nInterrupt signal received. Exiting...")
+		if err != nil {
+			return
+		}
 	}
 }

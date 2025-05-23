@@ -56,11 +56,19 @@ func (t *telnetClient) Close() error {
 
 // Send отправляет данные из STDIN в сокет.
 func (t *telnetClient) Send() error {
-	scanner := bufio.NewScanner(t.in)
+	reader := bufio.NewReader(t.in)
 	writer := bufio.NewWriter(t.conn)
 
-	for scanner.Scan() {
-		_, err := writer.WriteString(scanner.Text() + "\n")
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			return fmt.Errorf("send error: %w", err)
+		}
+
+		_, err = writer.WriteString(line)
 		if err != nil {
 			return fmt.Errorf("send error: %w", err)
 		}
@@ -69,12 +77,6 @@ func (t *telnetClient) Send() error {
 			return fmt.Errorf("flush error: %w", err)
 		}
 	}
-
-	// Если пользователь нажал Ctrl+D
-	if scanner.Err() == nil {
-		return nil
-	}
-	return scanner.Err()
 }
 
 // Receive получает данные из сокета и выводит их в STDOUT.
