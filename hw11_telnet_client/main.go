@@ -40,7 +40,7 @@ func main() {
 		_ = client.Close()
 	}(client)
 
-	_, _ = fmt.Fprintf(os.Stderr, "Connected to %s\n", address)
+	fmt.Fprintf(os.Stderr, "Connected to %s\n", address)
 
 	sendDone := make(chan struct{})
 	receiveDone := make(chan struct{})
@@ -50,16 +50,11 @@ func main() {
 		err := client.Receive()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				_, err := fmt.Fprintln(os.Stderr, "\nServer closed the connection.")
-				if err != nil {
-					return
-				}
+				fmt.Fprintln(os.Stderr, "\nServer closed the connection.")
 			} else {
-				_, err := fmt.Fprintf(os.Stderr, "\nReceive error: %v\n", err)
-				if err != nil {
-					return
-				}
+				fmt.Fprintf(os.Stderr, "\nReceive error: %v\n", err)
 			}
+			return
 		}
 		close(receiveDone)
 	}()
@@ -69,16 +64,11 @@ func main() {
 		err := client.Send()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				_, err := fmt.Fprintln(os.Stderr, "\nEOF detected. Closing connection.")
-				if err != nil {
-					return
-				}
+				fmt.Fprintln(os.Stderr, "\nEOF detected. Closing connection.")
 			} else {
-				_, err := fmt.Fprintf(os.Stderr, "\nSend error: %v\n", err)
-				if err != nil {
-					return
-				}
+				fmt.Fprintf(os.Stderr, "\nSend error: %v\n", err)
 			}
+			return
 		}
 		close(sendDone)
 	}()
@@ -88,7 +78,7 @@ func main() {
 	case <-sendDone:
 		// Ждем завершения receive
 		<-receiveDone
-		_, _ = fmt.Fprintln(os.Stderr, "Send and receive completed.")
+		fmt.Fprintln(os.Stderr, "Send and receive completed.")
 	case <-receiveDone:
 		// Ждем завершения send
 		<-sendDone
